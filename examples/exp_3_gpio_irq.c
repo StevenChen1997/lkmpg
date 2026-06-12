@@ -67,12 +67,11 @@ static int my_button_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int my_button_remove(struct platform_device *pdev)
+static void my_button_remove(struct platform_device *pdev)
 {
     struct my_button *btn = platform_get_drvdata(pdev);
 
     cancel_delayed_work_sync(&btn->work);
-    return 0;
 }
 
 static const struct of_device_id my_button_of_match[] = {

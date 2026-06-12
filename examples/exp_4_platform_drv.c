@@ -72,11 +72,10 @@ static int my_regs_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int my_regs_remove(struct platform_device *pdev)
+static void my_regs_remove(struct platform_device *pdev)
 {
     device_remove_file(&pdev->dev, &dev_attr_ctrl);
     device_remove_file(&pdev->dev, &dev_attr_status);
-    return 0;
 }
 
 static const struct of_device_id my_regs_of_match[] = {
