@@ -23,23 +23,35 @@ static bool data_ready;
 static ssize_t my_read(struct file *filp, char __user *buf,
                        size_t count, loff_t *ppos)
 {
-    ssize_t ret;
+    ssize_t ret = 0;
+
+    if (*ppos >= data_len) {
+        return 0; 
+    }
 
     if (wait_event_interruptible(read_wq, data_ready))
         return -ERESTARTSYS;
 
     mutex_lock(&data_lock);
 
-    if (count > data_len)
-        count = data_len;
+    if (*ppos >= data_len) {
+        ret = 0;
+        goto out;
+    }
 
-    if (copy_to_user(buf, data_buf, count)) {
+    if (count > data_len - *ppos)
+        count = data_len - *ppos;
+
+    if (copy_to_user(buf, data_buf + *ppos, count)) {
         ret = -EFAULT;
         goto out;
     }
 
-    data_ready = false;
+    *ppos += count;
     ret = count;
+
+    if (*ppos >= data_len)
+        data_ready = false;
 
 out:
     mutex_unlock(&data_lock);
