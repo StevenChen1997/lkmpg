@@ -48,7 +48,7 @@ echo "  Modules:  /mnt/lkmpg/examples/*.ko"
 echo "  Example:  insmod /mnt/lkmpg/examples/hello-1.ko"
 echo "            dmesg | tail"
 echo "            rmmod hello_1"
-echo "  Exit:     poweroff"
+echo "  Exit:     poweroff -f"
 echo "================================================"
 export PS1='lkmpg:\w# '
 exec /bin/sh
