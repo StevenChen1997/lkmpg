@@ -9,6 +9,7 @@
 *.mod
 *.mod.c
 modules.order
+exp_output/*
 
 # LaTeX
 _minted-lkmpg

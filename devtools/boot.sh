@@ -62,6 +62,7 @@ QEMU_ARGS=(
     -smp "$QEMU_SMP"
     -no-reboot
     -virtfs "local,id=lkmpg,path=$PROJECT_ROOT,security_model=none,mount_tag=lkmpg"
+    -virtfs "local,id=lkmpg_modprobe,path=$EXAMPLES_MOUNT_DIR/lib,security_model=none,mount_tag=lkmpg_modprobe"
     -append "$KCMD"
 )
 

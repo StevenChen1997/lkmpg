@@ -24,3 +24,16 @@ fi
 
 echo "Building modules against kernel $KERNEL_VERSION ..."
 make -C "$EXAMPLES_DIR" KDIR="$KERNEL_BUILD" "$@"
+
+echo "Install modules with dependencies ..."
+CP_TARGET_DIR="$EXAMPLES_MOUNT_DIR/lib/modules/$KERNEL_VERSION"
+if [ -d "$EXAMPLES_MOUNT_DIR" ]; then
+  rm -rf "$EXAMPLES_MOUNT_DIR"
+fi
+mkdir -p "$EXAMPLES_MOUNT_DIR/lib/modules/$KERNEL_VERSION"
+
+cp $EXAMPLES_DIR/modules.order $CP_TARGET_DIR
+cp $KERNEL_BUILD/modules.builtin $CP_TARGET_DIR
+cp $KERNEL_BUILD/modules.builtin.modinfo $CP_TARGET_DIR
+
+make -C "$KERNEL_BUILD" M="$EXAMPLES_DIR" INSTALL_MOD_PATH="$EXAMPLES_MOUNT_DIR" modules_install
