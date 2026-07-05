@@ -40,7 +40,13 @@ if [ -n "$TESTCMD" ]; then
     exit "$RESULT"
 fi
 
-# Interactive mode
+# Interactive mode with modprobe support
+mkdir -p /lib
+if ! mount -t 9p -o trans=virtio,version=9p2000.L lkmpg_modprobe /lib 2>/dev/null; then
+    echo "WARNING: 9p mount failed. /lib will be empty and modprobe is not working."
+    echo "Make sure QEMU was launched with -virtfs for lkmpg_modprobe."
+fi
+
 echo "================================================"
 echo "  lkmpg QEMU guest"
 echo "  Project:  /mnt/lkmpg/"
