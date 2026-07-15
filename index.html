@@ -2446,55 +2446,60 @@ HelloWorld!
 </span><span class='ecrm-0500'>20</span><span class='ectt-0800'>                             size_t buffer_length, loff_t *offset)
 </span><span class='ecrm-0500'>21</span><span class='ectt-0800'>{
 </span><span class='ecrm-0500'>22</span><span class='ectt-0800'>    char s[13] = "HelloWorld!\n";
-</span><span class='ecrm-0500'>23</span><span class='ectt-0800'>    int len = sizeof(s);
-</span><span class='ecrm-0500'>24</span><span class='ectt-0800'>    ssize_t ret = len;
+</span><span class='ecrm-0500'>23</span><span class='ectt-0800'>    ssize_t len = sizeof(s);
+</span><span class='ecrm-0500'>24</span><span class='ectt-0800'>    ssize_t count;
 </span><span class='ecrm-0500'>25</span>
-<span class='ecrm-0500'>26</span><span class='ectt-0800'>    if (*offset &gt;= len || copy_to_user(buffer, s, len)) {
-</span><span class='ecrm-0500'>27</span><span class='ectt-0800'>        pr_info("copy_to_user failed\n");
-</span><span class='ecrm-0500'>28</span><span class='ectt-0800'>        ret = 0;
-</span><span class='ecrm-0500'>29</span><span class='ectt-0800'>    } else {
-</span><span class='ecrm-0500'>30</span><span class='ectt-0800'>        pr_info("procfile read %s\n", file_pointer-&gt;f_path.dentry-&gt;d_name.name);
-</span><span class='ecrm-0500'>31</span><span class='ectt-0800'>        *offset += len;
-</span><span class='ecrm-0500'>32</span><span class='ectt-0800'>    }
-</span><span class='ecrm-0500'>33</span>
-<span class='ecrm-0500'>34</span><span class='ectt-0800'>    return ret;
-</span><span class='ecrm-0500'>35</span><span class='ectt-0800'>}
-</span><span class='ecrm-0500'>36</span>
-<span class='ecrm-0500'>37</span><span class='ectt-0800'>#ifdef HAVE_PROC_OPS
-</span><span class='ecrm-0500'>38</span><span class='ectt-0800'>static const struct proc_ops proc_file_fops = {
-</span><span class='ecrm-0500'>39</span><span class='ectt-0800'>    .proc_read = procfile_read,
-</span><span class='ecrm-0500'>40</span><span class='ectt-0800'>};
-</span><span class='ecrm-0500'>41</span><span class='ectt-0800'>#else
-</span><span class='ecrm-0500'>42</span><span class='ectt-0800'>static const struct file_operations proc_file_fops = {
-</span><span class='ecrm-0500'>43</span><span class='ectt-0800'>    .read = procfile_read,
+<span class='ecrm-0500'>26</span><span class='ectt-0800'>    if (*offset &gt;= len)
+</span><span class='ecrm-0500'>27</span><span class='ectt-0800'>        return 0;
+</span><span class='ecrm-0500'>28</span>
+<span class='ecrm-0500'>29</span><span class='ectt-0800'>    count = min(buffer_length, len - (size_t)*offset);
+</span><span class='ecrm-0500'>30</span>
+<span class='ecrm-0500'>31</span><span class='ectt-0800'>    if (copy_to_user(buffer, s + *offset, count)) {
+</span><span class='ecrm-0500'>32</span><span class='ectt-0800'>        pr_info("copy_to_user failed\n");
+</span><span class='ecrm-0500'>33</span><span class='ectt-0800'>        return -EFAULT;
+</span><span class='ecrm-0500'>34</span><span class='ectt-0800'>    }
+</span><span class='ecrm-0500'>35</span>
+<span class='ecrm-0500'>36</span><span class='ectt-0800'>    pr_info("procfile read %s\n", file_pointer-&gt;f_path.dentry-&gt;d_name.name);
+</span><span class='ecrm-0500'>37</span><span class='ectt-0800'>    *offset += len;
+</span><span class='ecrm-0500'>38</span>
+<span class='ecrm-0500'>39</span><span class='ectt-0800'>    return len;
+</span><span class='ecrm-0500'>40</span><span class='ectt-0800'>}
+</span><span class='ecrm-0500'>41</span>
+<span class='ecrm-0500'>42</span><span class='ectt-0800'>#ifdef HAVE_PROC_OPS
+</span><span class='ecrm-0500'>43</span><span class='ectt-0800'>static const struct proc_ops proc_file_fops = {
                                                                   
 
                                                                   
-</span><span class='ecrm-0500'>44</span><span class='ectt-0800'>};
-</span><span class='ecrm-0500'>45</span><span class='ectt-0800'>#endif
-</span><span class='ecrm-0500'>46</span>
-<span class='ecrm-0500'>47</span><span class='ectt-0800'>static int __init procfs1_init(void)
-</span><span class='ecrm-0500'>48</span><span class='ectt-0800'>{
-</span><span class='ecrm-0500'>49</span><span class='ectt-0800'>    our_proc_file = proc_create(procfs_name, 0644, NULL, &amp;proc_file_fops);
-</span><span class='ecrm-0500'>50</span><span class='ectt-0800'>    if (NULL == our_proc_file) {
-</span><span class='ecrm-0500'>51</span><span class='ectt-0800'>        pr_alert("Error:Could not initialize /proc/%s\n", procfs_name);
-</span><span class='ecrm-0500'>52</span><span class='ectt-0800'>        return -ENOMEM;
-</span><span class='ecrm-0500'>53</span><span class='ectt-0800'>    }
-</span><span class='ecrm-0500'>54</span>
-<span class='ecrm-0500'>55</span><span class='ectt-0800'>    pr_info("/proc/%s created\n", procfs_name);
-</span><span class='ecrm-0500'>56</span><span class='ectt-0800'>    return 0;
-</span><span class='ecrm-0500'>57</span><span class='ectt-0800'>}
-</span><span class='ecrm-0500'>58</span>
-<span class='ecrm-0500'>59</span><span class='ectt-0800'>static void __exit procfs1_exit(void)
-</span><span class='ecrm-0500'>60</span><span class='ectt-0800'>{
-</span><span class='ecrm-0500'>61</span><span class='ectt-0800'>    proc_remove(our_proc_file);
-</span><span class='ecrm-0500'>62</span><span class='ectt-0800'>    pr_info("/proc/%s removed\n", procfs_name);
-</span><span class='ecrm-0500'>63</span><span class='ectt-0800'>}
-</span><span class='ecrm-0500'>64</span>
-<span class='ecrm-0500'>65</span><span class='ectt-0800'>module_init(procfs1_init);
-</span><span class='ecrm-0500'>66</span><span class='ectt-0800'>module_exit(procfs1_exit);
-</span><span class='ecrm-0500'>67</span>
-<span class='ecrm-0500'>68</span><span class='ectt-0800'>MODULE_LICENSE("GPL");</span>
+</span><span class='ecrm-0500'>44</span><span class='ectt-0800'>    .proc_read = procfile_read,
+</span><span class='ecrm-0500'>45</span><span class='ectt-0800'>};
+</span><span class='ecrm-0500'>46</span><span class='ectt-0800'>#else
+</span><span class='ecrm-0500'>47</span><span class='ectt-0800'>static const struct file_operations proc_file_fops = {
+</span><span class='ecrm-0500'>48</span><span class='ectt-0800'>    .read = procfile_read,
+</span><span class='ecrm-0500'>49</span><span class='ectt-0800'>};
+</span><span class='ecrm-0500'>50</span><span class='ectt-0800'>#endif
+</span><span class='ecrm-0500'>51</span>
+<span class='ecrm-0500'>52</span><span class='ectt-0800'>static int __init procfs1_init(void)
+</span><span class='ecrm-0500'>53</span><span class='ectt-0800'>{
+</span><span class='ecrm-0500'>54</span><span class='ectt-0800'>    our_proc_file = proc_create(procfs_name, 0644, NULL, &amp;proc_file_fops);
+</span><span class='ecrm-0500'>55</span><span class='ectt-0800'>    if (NULL == our_proc_file) {
+</span><span class='ecrm-0500'>56</span><span class='ectt-0800'>        pr_alert("Error:Could not initialize /proc/%s\n", procfs_name);
+</span><span class='ecrm-0500'>57</span><span class='ectt-0800'>        return -ENOMEM;
+</span><span class='ecrm-0500'>58</span><span class='ectt-0800'>    }
+</span><span class='ecrm-0500'>59</span>
+<span class='ecrm-0500'>60</span><span class='ectt-0800'>    pr_info("/proc/%s created\n", procfs_name);
+</span><span class='ecrm-0500'>61</span><span class='ectt-0800'>    return 0;
+</span><span class='ecrm-0500'>62</span><span class='ectt-0800'>}
+</span><span class='ecrm-0500'>63</span>
+<span class='ecrm-0500'>64</span><span class='ectt-0800'>static void __exit procfs1_exit(void)
+</span><span class='ecrm-0500'>65</span><span class='ectt-0800'>{
+</span><span class='ecrm-0500'>66</span><span class='ectt-0800'>    proc_remove(our_proc_file);
+</span><span class='ecrm-0500'>67</span><span class='ectt-0800'>    pr_info("/proc/%s removed\n", procfs_name);
+</span><span class='ecrm-0500'>68</span><span class='ectt-0800'>}
+</span><span class='ecrm-0500'>69</span>
+<span class='ecrm-0500'>70</span><span class='ectt-0800'>module_init(procfs1_init);
+</span><span class='ecrm-0500'>71</span><span class='ectt-0800'>module_exit(procfs1_exit);
+</span><span class='ecrm-0500'>72</span>
+<span class='ecrm-0500'>73</span><span class='ectt-0800'>MODULE_LICENSE("GPL");</span>
    </pre>
 <!-- l. 1541 --><p class='noindent'>
 </p>
@@ -2512,13 +2517,13 @@ open/read/close sequence.
    <h4 class='subsectionHead' id='read-and-write-a-proc-file'><span class='titlemark'>7.2   </span> <a id='x1-420007.2'></a>Read and Write a /proc File</h4>
 <!-- l. 1550 --><p class='noindent'>We have seen a very simple example for a <span class='obeylines-h'><span class='verb'><span class='ectt-1000'>/proc</span></span></span> file where we only read the
 file <span class='obeylines-h'><span class='verb'><span class='ectt-1000'>/proc/helloworld</span></span></span>. It is also possible to write in a <span class='obeylines-h'><span class='verb'><span class='ectt-1000'>/proc</span></span></span> file. It works
+                                                                  
+
+                                                                  
 the same way as read, a function is called when the <span class='obeylines-h'><span class='verb'><span class='ectt-1000'>/proc</span></span></span> file is written.
 But there is a little difference with read, data comes from user, so you have
 to import data from user space to kernel space (with <span class='ectt-1000'>copy_from_user </span>or
 <span class='ectt-1000'>get_user</span>)
-                                                                  
-
-                                                                  
 </p><!-- l. 1555 --><p class='indent'>   The reason for <span class='ectt-1000'>copy_from_user </span>or <span class='ectt-1000'>get_user </span>is that Linux memory (on Intel
 architecture, it may be different under some other processors) is segmented. This
 means that a pointer, by itself, does not reference a unique location in memory, only
@@ -2566,84 +2571,95 @@ space.
 </span><span class='ecrm-0500'>23</span>
 <span class='ecrm-0500'>24</span><span class='ectt-0800'>/* The size of the buffer */
 </span><span class='ecrm-0500'>25</span><span class='ectt-0800'>static unsigned long procfs_buffer_size = 0;
+                                                                  
+
+                                                                  
 </span><span class='ecrm-0500'>26</span>
 <span class='ecrm-0500'>27</span><span class='ectt-0800'>/* This function is called then the /proc file is read */
 </span><span class='ecrm-0500'>28</span><span class='ectt-0800'>static ssize_t procfile_read(struct file *file_pointer, char __user *buffer,
 </span><span class='ecrm-0500'>29</span><span class='ectt-0800'>                             size_t buffer_length, loff_t *offset)
 </span><span class='ecrm-0500'>30</span><span class='ectt-0800'>{
-                                                                  
-
-                                                                  
-</span><span class='ecrm-0500'>31</span><span class='ectt-0800'>    char s[13] = "HelloWorld!\n";
-</span><span class='ecrm-0500'>32</span><span class='ectt-0800'>    int len = sizeof(s);
-</span><span class='ecrm-0500'>33</span><span class='ectt-0800'>    ssize_t ret = len;
-</span><span class='ecrm-0500'>34</span>
-<span class='ecrm-0500'>35</span><span class='ectt-0800'>    if (*offset &gt;= len || copy_to_user(buffer, s, len)) {
-</span><span class='ecrm-0500'>36</span><span class='ectt-0800'>        pr_info("copy_to_user failed\n");
-</span><span class='ecrm-0500'>37</span><span class='ectt-0800'>        ret = 0;
-</span><span class='ecrm-0500'>38</span><span class='ectt-0800'>    } else {
-</span><span class='ecrm-0500'>39</span><span class='ectt-0800'>        pr_info("procfile read %s\n", file_pointer-&gt;f_path.dentry-&gt;d_name.name);
-</span><span class='ecrm-0500'>40</span><span class='ectt-0800'>        *offset += len;
-</span><span class='ecrm-0500'>41</span><span class='ectt-0800'>    }
-</span><span class='ecrm-0500'>42</span>
-<span class='ecrm-0500'>43</span><span class='ectt-0800'>    return ret;
-</span><span class='ecrm-0500'>44</span><span class='ectt-0800'>}
-</span><span class='ecrm-0500'>45</span>
-<span class='ecrm-0500'>46</span><span class='ectt-0800'>/* This function is called when the /proc file is written. */
-</span><span class='ecrm-0500'>47</span><span class='ectt-0800'>static ssize_t procfile_write(struct file *file, const char __user *buff,
-</span><span class='ecrm-0500'>48</span><span class='ectt-0800'>                              size_t len, loff_t *off)
-</span><span class='ecrm-0500'>49</span><span class='ectt-0800'>{
-</span><span class='ecrm-0500'>50</span><span class='ectt-0800'>    procfs_buffer_size = len;
-</span><span class='ecrm-0500'>51</span><span class='ectt-0800'>    if (procfs_buffer_size &gt;= PROCFS_MAX_SIZE)
-</span><span class='ecrm-0500'>52</span><span class='ectt-0800'>        procfs_buffer_size = PROCFS_MAX_SIZE - 1;
-</span><span class='ecrm-0500'>53</span>
-<span class='ecrm-0500'>54</span><span class='ectt-0800'>    if (copy_from_user(procfs_buffer, buff, procfs_buffer_size))
-</span><span class='ecrm-0500'>55</span><span class='ectt-0800'>        return -EFAULT;
-</span><span class='ecrm-0500'>56</span>
-<span class='ecrm-0500'>57</span><span class='ectt-0800'>    procfs_buffer[procfs_buffer_size] = </span><span class='tctt-0800'>'</span><span class='ectt-0800'>\0</span><span class='tctt-0800'>'</span><span class='ectt-0800'>;
-</span><span class='ecrm-0500'>58</span><span class='ectt-0800'>    *off += procfs_buffer_size;
-</span><span class='ecrm-0500'>59</span><span class='ectt-0800'>    pr_info("procfile write %s\n", procfs_buffer);
+</span><span class='ecrm-0500'>31</span><span class='ectt-0800'>    ssize_t len = sizeof(procfs_buffer);
+</span><span class='ecrm-0500'>32</span><span class='ectt-0800'>    ssize_t count;
+</span><span class='ecrm-0500'>33</span>
+<span class='ecrm-0500'>34</span><span class='ectt-0800'>    if (*offset &gt;= len)
+</span><span class='ecrm-0500'>35</span><span class='ectt-0800'>        return 0;
+</span><span class='ecrm-0500'>36</span>
+<span class='ecrm-0500'>37</span><span class='ectt-0800'>    count = min(buffer_length, len - (size_t)*offset);
+</span><span class='ecrm-0500'>38</span>
+<span class='ecrm-0500'>39</span><span class='ectt-0800'>    if (copy_to_user(buffer, procfs_buffer + *offset, count)) {
+</span><span class='ecrm-0500'>40</span><span class='ectt-0800'>        pr_info("copy_to_user failed\n");
+</span><span class='ecrm-0500'>41</span><span class='ectt-0800'>        return -EFAULT;
+</span><span class='ecrm-0500'>42</span><span class='ectt-0800'>    }
+</span><span class='ecrm-0500'>43</span>
+<span class='ecrm-0500'>44</span><span class='ectt-0800'>    pr_info("procfile read %s\n", file_pointer-&gt;f_path.dentry-&gt;d_name.name);
+</span><span class='ecrm-0500'>45</span><span class='ectt-0800'>    *offset += count;
+</span><span class='ecrm-0500'>46</span>
+<span class='ecrm-0500'>47</span><span class='ectt-0800'>    return count;
+</span><span class='ecrm-0500'>48</span><span class='ectt-0800'>}
+</span><span class='ecrm-0500'>49</span>
+<span class='ecrm-0500'>50</span><span class='ectt-0800'>/* This function is called when the /proc file is written. */
+</span><span class='ecrm-0500'>51</span><span class='ectt-0800'>static ssize_t procfile_write(struct file *file, const char __user *buff,
+</span><span class='ecrm-0500'>52</span><span class='ectt-0800'>                              size_t len, loff_t *off)
+</span><span class='ecrm-0500'>53</span><span class='ectt-0800'>{
+</span><span class='ecrm-0500'>54</span><span class='ectt-0800'>    procfs_buffer_size = len;
+</span><span class='ecrm-0500'>55</span><span class='ectt-0800'>    if (procfs_buffer_size &gt;= PROCFS_MAX_SIZE)
+</span><span class='ecrm-0500'>56</span><span class='ectt-0800'>        procfs_buffer_size = PROCFS_MAX_SIZE - 1;
+</span><span class='ecrm-0500'>57</span>
+<span class='ecrm-0500'>58</span><span class='ectt-0800'>    if (copy_from_user(procfs_buffer, buff, procfs_buffer_size))
+</span><span class='ecrm-0500'>59</span><span class='ectt-0800'>        return -EFAULT;
 </span><span class='ecrm-0500'>60</span>
-<span class='ecrm-0500'>61</span><span class='ectt-0800'>    return procfs_buffer_size;
-</span><span class='ecrm-0500'>62</span><span class='ectt-0800'>}
-</span><span class='ecrm-0500'>63</span>
-<span class='ecrm-0500'>64</span><span class='ectt-0800'>#ifdef HAVE_PROC_OPS
-</span><span class='ecrm-0500'>65</span><span class='ectt-0800'>static const struct proc_ops proc_file_fops = {
-</span><span class='ecrm-0500'>66</span><span class='ectt-0800'>    .proc_read = procfile_read,
-</span><span class='ecrm-0500'>67</span><span class='ectt-0800'>    .proc_write = procfile_write,
-</span><span class='ecrm-0500'>68</span><span class='ectt-0800'>};
-</span><span class='ecrm-0500'>69</span><span class='ectt-0800'>#else
-</span><span class='ecrm-0500'>70</span><span class='ectt-0800'>static const struct file_operations proc_file_fops = {
-</span><span class='ecrm-0500'>71</span><span class='ectt-0800'>    .read = procfile_read,
-</span><span class='ecrm-0500'>72</span><span class='ectt-0800'>    .write = procfile_write,
-</span><span class='ecrm-0500'>73</span><span class='ectt-0800'>};
-</span><span class='ecrm-0500'>74</span><span class='ectt-0800'>#endif
-</span><span class='ecrm-0500'>75</span>
-<span class='ecrm-0500'>76</span><span class='ectt-0800'>static int __init procfs2_init(void)
-</span><span class='ecrm-0500'>77</span><span class='ectt-0800'>{
-</span><span class='ecrm-0500'>78</span><span class='ectt-0800'>    our_proc_file = proc_create(PROCFS_NAME, 0644, NULL, &amp;proc_file_fops);
-</span><span class='ecrm-0500'>79</span><span class='ectt-0800'>    if (NULL == our_proc_file) {
-</span><span class='ecrm-0500'>80</span><span class='ectt-0800'>        pr_alert("Error:Could not initialize /proc/%s\n", PROCFS_NAME);
-</span><span class='ecrm-0500'>81</span><span class='ectt-0800'>        return -ENOMEM;
-</span><span class='ecrm-0500'>82</span><span class='ectt-0800'>    }
-</span><span class='ecrm-0500'>83</span>
-<span class='ecrm-0500'>84</span><span class='ectt-0800'>    pr_info("/proc/%s created\n", PROCFS_NAME);
-</span><span class='ecrm-0500'>85</span><span class='ectt-0800'>    return 0;
-</span><span class='ecrm-0500'>86</span><span class='ectt-0800'>}
-</span><span class='ecrm-0500'>87
+<span class='ecrm-0500'>61</span><span class='ectt-0800'>    procfs_buffer[procfs_buffer_size] = </span><span class='tctt-0800'>'</span><span class='ectt-0800'>\0</span><span class='tctt-0800'>'</span><span class='ectt-0800'>;
+</span><span class='ecrm-0500'>62</span><span class='ectt-0800'>    *off += procfs_buffer_size;
+</span><span class='ecrm-0500'>63</span><span class='ectt-0800'>    pr_info("procfile write %s\n", procfs_buffer);
+</span><span class='ecrm-0500'>64</span>
+<span class='ecrm-0500'>65</span><span class='ectt-0800'>    return procfs_buffer_size;
+</span><span class='ecrm-0500'>66</span><span class='ectt-0800'>}
+</span><span class='ecrm-0500'>67</span>
+<span class='ecrm-0500'>68</span><span class='ectt-0800'>#ifdef HAVE_PROC_OPS
+</span><span class='ecrm-0500'>69</span><span class='ectt-0800'>static const struct proc_ops proc_file_fops = {
+</span><span class='ecrm-0500'>70</span><span class='ectt-0800'>    .proc_read = procfile_read,
+</span><span class='ecrm-0500'>71</span><span class='ectt-0800'>    .proc_write = procfile_write,
+</span><span class='ecrm-0500'>72</span><span class='ectt-0800'>};
+</span><span class='ecrm-0500'>73</span><span class='ectt-0800'>#else
+</span><span class='ecrm-0500'>74</span><span class='ectt-0800'>static const struct file_operations proc_file_fops = {
+</span><span class='ecrm-0500'>75</span><span class='ectt-0800'>    .read = procfile_read,
+</span><span class='ecrm-0500'>76</span><span class='ectt-0800'>    .write = procfile_write,
+</span><span class='ecrm-0500'>77</span><span class='ectt-0800'>};
+</span><span class='ecrm-0500'>78</span><span class='ectt-0800'>#endif
+</span><span class='ecrm-0500'>79</span>
+<span class='ecrm-0500'>80</span><span class='ectt-0800'>static int __init procfs2_init(void)
+</span><span class='ecrm-0500'>81</span><span class='ectt-0800'>{
+</span><span class='ecrm-0500'>82</span><span class='ectt-0800'>    int ret;
                                                                   
 
                                                                   
-</span><span class='ecrm-0500'>88</span><span class='ectt-0800'>static void __exit procfs2_exit(void)
-</span><span class='ecrm-0500'>89</span><span class='ectt-0800'>{
-</span><span class='ecrm-0500'>90</span><span class='ectt-0800'>    proc_remove(our_proc_file);
-</span><span class='ecrm-0500'>91</span><span class='ectt-0800'>    pr_info("/proc/%s removed\n", PROCFS_NAME);
-</span><span class='ecrm-0500'>92</span><span class='ectt-0800'>}
-</span><span class='ecrm-0500'>93</span>
-<span class='ecrm-0500'>94</span><span class='ectt-0800'>module_init(procfs2_init);
-</span><span class='ecrm-0500'>95</span><span class='ectt-0800'>module_exit(procfs2_exit);
-</span><span class='ecrm-0500'>96</span>
-<span class='ecrm-0500'>97</span><span class='ectt-0800'>MODULE_LICENSE("GPL");</span>
+</span><span class='ecrm-0500'>83</span>
+<span class='ecrm-0500'>84</span><span class='ectt-0800'>    our_proc_file = proc_create(PROCFS_NAME, 0644, NULL, &amp;proc_file_fops);
+</span><span class='ecrm-0500'>85</span><span class='ectt-0800'>    if (NULL == our_proc_file) {
+</span><span class='ecrm-0500'>86</span><span class='ectt-0800'>        pr_alert("Error:Could not initialize /proc/%s\n", PROCFS_NAME);
+</span><span class='ecrm-0500'>87</span><span class='ectt-0800'>        return -ENOMEM;
+</span><span class='ecrm-0500'>88</span><span class='ectt-0800'>    }
+</span><span class='ecrm-0500'>89</span>
+<span class='ecrm-0500'>90</span><span class='ectt-0800'>    pr_info("/proc/%s created\n", PROCFS_NAME);
+</span><span class='ecrm-0500'>91</span>
+<span class='ecrm-0500'>92</span><span class='ectt-0800'>    // Update default value of buffer
+</span><span class='ecrm-0500'>93</span><span class='ectt-0800'>    ret = snprintf(procfs_buffer, sizeof(procfs_buffer) - 1, "HelloWorld!\n");
+</span><span class='ecrm-0500'>94</span><span class='ectt-0800'>    if (ret &lt; 0)
+</span><span class='ecrm-0500'>95</span><span class='ectt-0800'>        return ret;
+</span><span class='ecrm-0500'>96</span><span class='ectt-0800'>    return 0;
+</span><span class='ecrm-0500'>97</span><span class='ectt-0800'>}
+</span><span class='ecrm-0500'>98</span>
+<span class='ecrm-0500'>99</span><span class='ectt-0800'>static void __exit procfs2_exit(void)
+</span><span class='ecrm-0500'>100</span><span class='ectt-0800'>{
+</span><span class='ecrm-0500'>101</span><span class='ectt-0800'>    proc_remove(our_proc_file);
+</span><span class='ecrm-0500'>102</span><span class='ectt-0800'>    pr_info("/proc/%s removed\n", PROCFS_NAME);
+</span><span class='ecrm-0500'>103</span><span class='ectt-0800'>}
+</span><span class='ecrm-0500'>104</span>
+<span class='ecrm-0500'>105</span><span class='ectt-0800'>module_init(procfs2_init);
+</span><span class='ecrm-0500'>106</span><span class='ectt-0800'>module_exit(procfs2_exit);
+</span><span class='ecrm-0500'>107</span>
+<span class='ecrm-0500'>108</span><span class='ectt-0800'>MODULE_LICENSE("GPL");</span>
    </pre>
 <!-- l. 1568 --><p class='noindent'>
 </p>
@@ -2667,6 +2683,9 @@ tools report the entry.
 the kernel. Read functions are used for output, whereas write functions are used for
 input. The reason for that is that read and write refer to the user’s point of view — if
 a process reads something from the kernel, then the kernel needs to output it, and
+                                                                  
+
+                                                                  
 if a process writes something to the kernel, then the kernel receives it as
 input.
 </p><!-- l. 1587 --><p class='indent'>
@@ -2681,9 +2700,6 @@ input.
 </span><span class='ecrm-0500'>7</span><span class='ectt-0800'>#include &lt;linux/proc_fs.h&gt;
 </span><span class='ecrm-0500'>8</span><span class='ectt-0800'>#include &lt;linux/sched.h&gt;
 </span><span class='ecrm-0500'>9</span><span class='ectt-0800'>#include &lt;linux/uaccess.h&gt;
-                                                                  
-
-                                                                  
 </span><span class='ecrm-0500'>10</span><span class='ectt-0800'>#include &lt;linux/version.h&gt;
 </span><span class='ecrm-0500'>11</span><span class='ectt-0800'>#if LINUX_VERSION_CODE &gt;= KERNEL_VERSION(5, 10, 0)
 </span><span class='ecrm-0500'>12</span><span class='ectt-0800'>#include &lt;linux/minmax.h&gt;
@@ -2726,6 +2742,9 @@ input.
 </span><span class='ecrm-0500'>49</span>
 <span class='ecrm-0500'>50</span><span class='ectt-0800'>    pr_debug("procfs_write: write %lu bytes\n", procfs_buffer_size);
 </span><span class='ecrm-0500'>51</span><span class='ectt-0800'>    return procfs_buffer_size;
+                                                                  
+
+                                                                  
 </span><span class='ecrm-0500'>52</span><span class='ectt-0800'>}
 </span><span class='ecrm-0500'>53</span><span class='ectt-0800'>static int procfs_open(struct inode *inode, struct file *file)
 </span><span class='ecrm-0500'>54</span><span class='ectt-0800'>{
@@ -2741,9 +2760,6 @@ input.
 </span><span class='ecrm-0500'>64</span><span class='ectt-0800'>    .proc_read = procfs_read,
 </span><span class='ecrm-0500'>65</span><span class='ectt-0800'>    .proc_write = procfs_write,
 </span><span class='ecrm-0500'>66</span><span class='ectt-0800'>    .proc_open = procfs_open,
-                                                                  
-
-                                                                  
 </span><span class='ecrm-0500'>67</span><span class='ectt-0800'>    .proc_release = procfs_close,
 </span><span class='ecrm-0500'>68</span><span class='ectt-0800'>};
 </span><span class='ecrm-0500'>69</span><span class='ectt-0800'>#else
@@ -2786,6 +2802,9 @@ input.
 around, claiming that procfs is on its way out, consider using <span class='obeylines-h'><span class='verb'><span class='ectt-1000'>sysfs</span></span></span> instead. Consider
 using this mechanism, in case you want to document something kernel related
 yourself.
+                                                                  
+
+                                                                  
 </p><!-- l. 1593 --><p class='noindent'>
 </p>
    <h4 class='subsectionHead' id='manage-proc-file-with-seqfile'><span class='titlemark'>7.4   </span> <a id='x1-440007.4'></a>Manage /proc file with seq_file</h4>
@@ -2795,9 +2814,6 @@ file for output. It is based on sequence, which is composed of 3 functions: <spa
 <span class='ectt-1000'>next()</span>, and <span class='ectt-1000'>stop()</span>. The <span class='ectt-1000'>seq_file </span>API starts a sequence when a user reads the
 <span class='obeylines-h'><span class='verb'><span class='ectt-1000'>/proc</span></span></span> file.
 </p><!-- l. 1600 --><p class='indent'>   A sequence begins with the call of the function <span class='ectt-1000'>start()</span>. If the return is a non
-                                                                  
-
-                                                                  
 <span class='ectt-1000'>NULL </span>value, the function <span class='ectt-1000'>next() </span>is called; otherwise, the <span class='ectt-1000'>stop() </span>function is called
 directly. This function is an iterator, the goal is to go through all the data. Each time
 <span class='ectt-1000'>next() </span>is called, the function <span class='ectt-1000'>show() </span>is also called. It writes data values in the
